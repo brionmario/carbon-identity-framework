@@ -34,7 +34,7 @@ jobs:
           PR_NUMBER=${{ github.event.pull_request.number }}
           
           # Fetch all branches including remote branches
-          git fetch origin --all
+          git fetch --all
           
           # Check if target branch exists
           if ! git ls-remote --exit-code origin "${{ env.TARGET_BRANCH }}" > /dev/null 2>&1; then
