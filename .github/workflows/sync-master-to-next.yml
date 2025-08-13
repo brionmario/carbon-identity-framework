@@ -68,7 +68,7 @@ jobs:
           gh pr create \
             --base "${{ env.TARGET_BRANCH }}" \
             --head "$SYNC_BRANCH" \
-            --title "Sync: ${{ github.event.pull_request.title }}" \
+            --title "[Sync][\`${{ env.TARGET_BRANCH }}\` -> \`master\`][#${{ github.event.pull_request.number }}]: ${{ github.event.pull_request.title }}" \
             --body "🤖 **Auto-sync from master**
           This PR automatically syncs the changes from #${{ github.event.pull_request.number }} to the \`${{ env.TARGET_BRANCH }}\` branch.
           
