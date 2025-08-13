@@ -33,8 +33,14 @@ jobs:
           SYNC_BRANCH="sync-to-${{ env.TARGET_BRANCH }}-${{ github.run_id }}"
           PR_NUMBER=${{ github.event.pull_request.number }}
           
-          # Fetch latest changes
-          git fetch origin
+          # Fetch all branches including remote branches
+          git fetch origin --all
+          
+          # Check if target branch exists
+          if ! git ls-remote --exit-code origin "${{ env.TARGET_BRANCH }}" > /dev/null 2>&1; then
+            echo "::error::Target branch '${{ env.TARGET_BRANCH }}' does not exist"
+            exit 1
+          fi
           
           # Create sync branch from target branch
           git checkout -b "$SYNC_BRANCH" "origin/${{ env.TARGET_BRANCH }}"
