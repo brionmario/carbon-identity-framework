@@ -33,52 +33,27 @@ jobs:
           SYNC_BRANCH="sync-to-${{ env.TARGET_BRANCH }}-${{ github.run_id }}"
           PR_NUMBER=${{ github.event.pull_request.number }}
           
-          # Fetch all branches including remote branches
-          git fetch --all
+          # Fetch latest changes
+          git fetch origin
           
-          # Check if target branch exists
-          if ! git ls-remote --exit-code origin "${{ env.TARGET_BRANCH }}" > /dev/null 2>&1; then
-            echo "::error::Target branch '${{ env.TARGET_BRANCH }}' does not exist"
-            exit 1
-          fi
-
           # Create sync branch from target branch
           git checkout -b "$SYNC_BRANCH" "origin/${{ env.TARGET_BRANCH }}"
           
-          # Get PR commits (excluding merge commits) in chronological order
-          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq '.commits[].oid')
+          # Get PR commits (excluding merge commits)
+          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq '.commits[].oid' | tac)
           
-          echo "Original commit hashes to cherry-pick:"
-          echo "$COMMITS"
-          
-          # Cherry-pick each commit while preserving commit message format
+          # Cherry-pick each commit
           echo "Cherry-picking commits..."
           for commit in $COMMITS; do
             if git show --no-patch --format=%p "$commit" | grep -q " "; then
               echo "Skipping merge commit: $commit"
               continue
             fi
-            
-            # Get original commit details
-            ORIGINAL_AUTHOR=$(git show --no-patch --format="%an <%ae>" "$commit")
-            ORIGINAL_DATE=$(git show --no-patch --format="%ad" "$commit")
-            COMMIT_MSG=$(git show --no-patch --format="%B" "$commit")
-            
-            echo "Cherry-picking: $commit (Original: $commit)"
-            echo "Author: $ORIGINAL_AUTHOR"
-            echo "Date: $ORIGINAL_DATE"
-            
+            echo "Cherry-picking: $commit"
             if ! git cherry-pick "$commit"; then
               echo "::error::Cherry-pick failed for $commit. Manual intervention required."
-              echo "Original commit: $commit"
               exit 1
             fi
-            
-            # Add reference to original commit in the commit message
-            NEW_COMMIT=$(git rev-parse HEAD)
-            git commit --amend -m "$COMMIT_MSG
-
-          (cherry picked from commit $commit)"
           done
           
           # Push sync branch
@@ -88,7 +63,7 @@ jobs:
           gh pr create \
             --base "${{ env.TARGET_BRANCH }}" \
             --head "$SYNC_BRANCH" \
-            --title "Sync: ${{ github.event.pull_request.title }}" \
+            --title "[Sync][\`${{ env.TARGET_BRANCH }}\` -> \`master\`][#${{ github.event.pull_request.number }}]: ${{ github.event.pull_request.title }}" \
             --body "🤖 **Auto-sync from master**
 
           This PR automatically syncs the changes from #${{ github.event.pull_request.number }} to the \`${{ env.TARGET_BRANCH }}\` branch.
